@@ -2,11 +2,13 @@
 
 **Peptide Regression and Inverse design for Selective Metalloproteinase substrates**
 
-PRISM is a deep learning framework for predicting peptide cleavage activity and designing substrates for matrix metalloproteinases (MMPs). It brings activity prediction and sequence generation into a single workflow, with a focus on identifying peptides that combine high predicted MMP13 activity with selectivity over the other 17 MMPs.
+PRISM is a deep learning framework for predicting peptide cleavage activity and designing substrates for matrix metalloproteinases (MMPs). It brings activity prediction and sequence generation into a single workflow, with target-specific generation across 18 MMPs.
 
 The **PRISM predictor** combines peptide language-model features with enzyme-conditioned modeling to estimate an 18-enzyme activity profile for each sequence. These profiles support candidate screening based on both target activity and competing enzyme activity.
 
-The **PRISM generator** designs peptide sequences conditioned on requested activity profiles. It combines profile and competition experts with Pareto-DPO, using predictor-derived preferences to favor MMP13 activity and selectivity. Generated candidates can then be scored and ranked for experimental follow-up.
+The **PRISM generator** combines profile and competition experts with standard DPO to optimize target activity and selectivity against the other 17 MMPs. To our knowledge, PRISM is the first framework for target-specific substrate generation across all 18 MMPs.
+
+Supported targets: **MMP1, MMP2, MMP3, MMP7, MMP8, MMP9, MMP10, MMP11, MMP12, MMP13, MMP14, MMP15, MMP16, MMP17, MMP19, MMP20, MMP24 and MMP25**.
 
 This repository provides pretrained predictor and generator weights, their training pipelines, and tools for peptide generation, prediction and evaluation.
 
@@ -92,35 +94,26 @@ Models are saved to `outputs/predictor/training/seed{0,1,2}/final.pt`. Pass a ne
 
 ### PRISM generator full training pipeline
 
+The training environment uses Python 3.12, PyTorch 2.6.0, NumPy 2.3.2 and pandas 2.3.0:
+
 ```sh
-# Train all three seeds:
+python3.12 -m venv .venv-generator
+.venv-generator/bin/python -m pip install -r requirements/generator-training.txt
+export GENERATOR_PYTHON="$PWD/.venv-generator/bin/python"
+```
+
+```sh
+# Full training, all three seeds:
 DEVICE=cuda bash run.sh train-generator
-# One seed, or resume interrupted training:
-SEEDS="0" DEVICE=cuda bash run.sh train-generator
+# Train the 18-target stages from the packaged pretrained mixture:
+FROM_INITIALIZATION=1 DEVICE=cuda bash run.sh train-generator
+# Resume one seed:
 SEEDS="0" RESUME=1 DEVICE=cuda bash run.sh train-generator
 ```
 
-The complete pipeline trains the base decoder, two conditional experts, and their mixture before Pareto-DPO:
+The training stages are base decoder pretraining (150 epochs), refinement (60), profile and competition experts (300 each), supervised mixture training (60), 18-target supervised adaptation (60), and standard DPO (1,000 updates). Adaptation selects the minimum mean development NLL across the 18 targets; DPO averages the 18 per-target mean gradients and retains the final update. Seed 0 uses two GPUs for adaptation and DPO; seeds 1 and 2 use one each.
 
-| Stage | Training budget |
-| --- | --- |
-| Base decoder | 150 epochs from random initialization |
-| Base refinement | 60 epochs |
-| Profile and competition experts | 300 epochs each |
-| Supervised mixture | 60 epochs |
-| Pareto-DPO | 1,000 updates |
-
-Training uses the packaged fitting data and prediction-derived preference pairs. Settings are in `generator/configs/training.json` and `generator/configs/pareto_dpo.json`.
-
-Final models are saved to `outputs/generator/training/seed{0,1,2}/final.pt`. Pass a new model to `generator/sample.py --checkpoint` to generate peptides. Training commands save new weights separately; prediction and generation commands use the released checkpoints by default.
-
-To run only DPO from the included supervised initialization:
-
-```sh
-DEVICE=cuda bash run.sh train-generator-dpo
-```
-
-DPO-only models are saved to `outputs/generator/dpo/seed{0,1,2}/last.pt`. Use `SEEDS` and `RESUME` as above to select seeds or resume training.
+Released weights are `generator/checkpoints/generator_SEED0.pt`, `generator_SEED1.pt` and `generator_SEED2.pt`. Training writes new weights to `outputs/generator/training/seed*/generator_SEED*.pt`. The exact DPO starting states are in `generator/initialization/adapted_SEED*.pt`; `DEVICE=cuda bash run.sh train-generator-dpo` trains from them. Settings and checkpoint hashes are in `generator/configs/`.
 
 ## Predicting peptide activity
 
@@ -149,32 +142,26 @@ The output NPZ contains the input sequences, enzyme names and an N × 18 array o
 ### Generate and score
 
 ```sh
-DEVICE=cuda bash run.sh generator
+# Generate substrates for one MMP:
+TARGET=MMP1 DEVICE=cuda bash run.sh generator
+# Generate for all 18 MMPs:
+TARGET=all DEVICE=cuda bash run.sh generator
+# Score the generated pools and rank candidates for their requested enzyme:
 DEVICE=cuda bash run.sh score-generated
 ```
 
-Generation uses 50 packaged MMP13 profiles, 400 attempts per profile and two sampling repeats for each checkpoint. Scoring uses the three PRISM predictors and exports predicted activity profiles and selected candidates.
-
-```sh
-# Unconditional generation:
-MODE=unconditional TEMPERATURE=1.0 bash run.sh generator
-# A single checkpoint and a custom output directory:
-SEEDS="0" OUTPUT_DIR="$PWD/my_results" bash run.sh generator
-```
+By default, each checkpoint generates 400 attempts per template from 50 target-specific profiles, with two sampling repeats. `SEEDS="0"` selects one checkpoint. Each pool records its target, target index, request, training seed and sampling seed. Scoring exports all 18 predicted activities and ranks Top24/Top100 candidates by `min(target − 1, target − max(other 17))`.
 
 ### Single-checkpoint generation and evaluation
 
 ```sh
-# Generate 50 attempts with one checkpoint on CPU:
-python generator/sample.py --checkpoint generator/checkpoints/seed0.pt \
-  --device cpu --per-template 1 --output outputs/example.csv
-python generator/evaluate_checkpoint.py --checkpoint generator/checkpoints/seed0.pt \
-  --device cuda --output outputs/development_nll.json
+python generator/sample.py --checkpoint generator/checkpoints/generator_SEED0.pt \
+  --target MMP9 --device cpu --per-template 1 --output outputs/MMP9.csv
+python generator/evaluate_checkpoint.py --checkpoint generator/checkpoints/generator_SEED0.pt \
+  --target all --device cuda --output outputs/development_nll.json
 ```
 
-Sampling temperature defaults to 1.2 for conditional generation and 1.0 for unconditional generation. Generated sequences are saved as CSV files. Scoring exports predicted activity profiles and ranked Top24/Top100 MMP13 candidates.
-
-Use each script’s `--help` for additional options.
+`REQUEST=g1_original50` is the default measured-profile request; `fit_paper` uses predicted fitting profiles. The `observed` and `counterfactual` requests reproduce the main-text sampling protocol with `PER_TEMPLATE=40 SAMPLING_SEEDS="2026112101 2026112102"`. The request selects its matching templates, sampling kernel and novelty exclusions. `MODE=unconditional` generates without profile conditioning. Use `--help` for script options.
 
 ## Run settings
 
@@ -183,6 +170,9 @@ Use each script’s `--help` for additional options.
 | `DEVICE` | `cuda` | `cuda` or `cpu` |
 | `FEATURE_PRECISION` | `bf16` | Use `fp32` for CPU feature extraction |
 | `SEEDS` | `0 1 2` | Checkpoints to run |
+| `TARGET` | `all` | One supported MMP or all 18 |
+| `REQUEST` | `g1_original50` | Request profiles and sampling protocol |
+| `FROM_INITIALIZATION` | `0` | Set `1` to start training from the packaged pretrained mixture |
 | `MODE` | `selective` | `selective` or `unconditional` |
 | `TEMPERATURE` | `1.2` / `1.0` | Conditional / unconditional sampling |
 | `PER_TEMPLATE` | `400` | Attempts per profile |
@@ -212,17 +202,7 @@ Benchmark data use cleavage Z-scores; OOD data use published experimental effici
 
 ### Generator data
 
-| File under `generator/data/` | Contents |
-| --- | --- |
-| `fit.npz` | 10,954 fitting peptides with sequences, tokens, measured labels and rounded conditions |
-| `development.npz` | 1,434 peptides for development loss evaluation |
-| `preferences.csv` | 6,400 pairs: 5,101 training and 1,299 validation |
-| `requests.json` | Requested 18-enzyme profiles, keyed by `fit_condition_index` |
-| `templates.json` | 50 generation profiles and their fitting sequences, in sampling order |
-| `known_sequences.txt` | 31,383 sequences excluded when counting novel outputs |
-| `target_order.json` | Enzyme order; MMP13 has zero-based index 4 |
-
-Generator conditions use 18-enzyme Z-score profiles rounded to 0.1. Preference pairs are scored by PRISM. `known_sequences.txt` is used to exclude known sequences when reporting novelty.
+`generator/data/` contains the 10,954-sequence fitting split, 1,434-sequence development split, three seed-specific preference tables, all 18 target request profiles, and the corresponding novelty exclusion sets. `target_order.json` defines the common enzyme-column order for generation, evaluation and scoring. `requests_18.json` supplies the conditions used for standard-DPO training; `templates_18.json` supplies the supplementary generation profiles. Training uses the fixed packaged preference pairs.
 
 ## Outputs
 
@@ -236,4 +216,4 @@ Generator conditions use 18-enzyme Z-score profiles rounded to 0.1. Preference p
 | `generator/quality/` | Sequence-quality summaries |
 | `generator/prism_scores/` | Predicted activity profiles, scores and selected peptides |
 | `generator/training/seed*/` | Complete generator training: stage checkpoints, histories and final model |
-| `generator/dpo/seed*/` | Checkpoints from DPO training with the supplied initialization |
+| `generator/dpo/seed*/` | Standard-DPO weights trained from the supplied 18-target initialization |

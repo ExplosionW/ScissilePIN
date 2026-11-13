@@ -10,6 +10,9 @@ DEVICE="${DEVICE:-cuda}"
 FEATURE_PRECISION="${FEATURE_PRECISION:-bf16}"
 SEEDS="${SEEDS:-0 1 2}"
 MODE="${MODE:-selective}"
+TARGET="${TARGET:-all}"
+REQUEST="${REQUEST:-g1_original50}"
+FROM_INITIALIZATION="${FROM_INITIALIZATION:-0}"
 if [[ "$MODE" == unconditional ]]; then DEFAULT_TEMP=1.0; else DEFAULT_TEMP=1.2; fi
 TEMPERATURE="${TEMPERATURE:-$DEFAULT_TEMP}"
 SAMPLING_SEEDS="${SAMPLING_SEEDS:-2026111201 2026111202}"
@@ -27,7 +30,7 @@ Usage: bash run.sh COMMAND
   verify           Verify files, labelled datasets and disjoint sequence splits.
   smoke            Load all predictor weights and sample 50 peptides per generator.
   predictor        Extract ESM features; predict val/test/OOD; evaluate all three seeds.
-  generator        Evaluate development NLL and generate PRISM Pareto-DPO pools.
+  generator        Evaluate development NLL and generate PRISM generator standard-DPO pools.
   score-generated  Score generated pools using the three-seed PRISM predictor ensemble.
   all              Run verify, predictor, generator and score-generated.
   train-predictor  Train the PRISM predictor.
@@ -38,6 +41,8 @@ Environment variables:
   PYTORCH_PYTHON, GENERATOR_PYTHON, METRICS_PYTHON   Python executables
   DEVICE=cuda, FEATURE_PRECISION=bf16              Device and predictor/ESM precision
   SEEDS="0 1 2", TEMPERATURE=1.2, MODE=selective     Experiment settings
+  TARGET=all, REQUEST=g1_original50              Select one MMP or all 18
+  FROM_INITIALIZATION=0                          Start at packaged mixture when set to 1
   PER_TEMPLATE=400, OUTPUT_DIR=./outputs           Sampling count and output location
   SAMPLING_SEEDS="2026111201 2026111202"            Separate sampling replicates
   FEATURE_DIR=./outputs/features                   Reuse extracted ESM features
@@ -58,8 +63,9 @@ smoke() {
   "$PYTORCH_PYTHON" evaluation/smoke_predictor.py
   "$GENERATOR_PYTHON" evaluation/smoke_generator.py
   mkdir -p "$OUT/smoke/pools"
+  local target=MMP1
   for seed in $SEEDS; do
-    "$GENERATOR_PYTHON" generator/sample.py --checkpoint "generator/checkpoints/seed${seed}.pt" --device "$DEVICE" --seed 2026111201 --per-template 1 --output "$OUT/smoke/pools/PRISM_generator_seed${seed}_sample2026111201_T1.2_selective.csv"
+    "$GENERATOR_PYTHON" generator/sample.py --target "$target" --request "$REQUEST" --checkpoint "generator/checkpoints/generator_SEED${seed}.pt" --device "$DEVICE" --seed 2026111201 --per-template 1 --output "$OUT/smoke/pools/PRISM_generator_seed${seed}_sample2026111201_T1.2_selective.csv"
   done
   "$METRICS_PYTHON" evaluation/generator_quality.py --pools "$OUT/smoke/pools" --output "$OUT/smoke/quality"
 }
@@ -79,10 +85,14 @@ predictor() {
 }
 generator() {
   mkdir -p "$OUT/generator/nll" "$OUT/generator/pools"
+  local targets
+  if [[ "$TARGET" == all ]]; then targets="$("$GENERATOR_PYTHON" -c 'import json; print(" ".join(json.load(open("generator/data/target_order.json"))))')"; else targets="$TARGET"; fi
   for seed in $SEEDS; do
-    "$GENERATOR_PYTHON" generator/evaluate_checkpoint.py --checkpoint "generator/checkpoints/seed${seed}.pt" --device "$DEVICE" --output "$OUT/generator/nll/nll_seed${seed}.json"
+    "$GENERATOR_PYTHON" generator/evaluate_checkpoint.py --target "$TARGET" --checkpoint "generator/checkpoints/generator_SEED${seed}.pt" --device "$DEVICE" --output "$OUT/generator/nll/nll_seed${seed}.json"
+    for target in $targets; do
     for rep in $SAMPLING_SEEDS; do
-      "$GENERATOR_PYTHON" generator/sample.py --checkpoint "generator/checkpoints/seed${seed}.pt" --device "$DEVICE" --seed "$rep" --temperature "$TEMPERATURE" --mode "$MODE" --per-template "$PER_TEMPLATE" --output "$OUT/generator/pools/PRISM_generator_seed${seed}_sample${rep}_T${TEMPERATURE}_${MODE}.csv"
+      "$GENERATOR_PYTHON" generator/sample.py --target "$target" --request "$REQUEST" --checkpoint "generator/checkpoints/generator_SEED${seed}.pt" --device "$DEVICE" --seed "$rep" --temperature "$TEMPERATURE" --mode "$MODE" --per-template "$PER_TEMPLATE" --output "$OUT/generator/pools/PRISM_generator_${target}_${REQUEST}_seed${seed}_sample${rep}_T${TEMPERATURE}_${MODE}.csv"
+    done
     done
   done
   "$METRICS_PYTHON" evaluation/summarize_nll.py --input "$OUT/generator/nll"
@@ -107,6 +117,7 @@ train_predictor() {
 }
 train_generator() {
   local extra=()
+  [[ "$FROM_INITIALIZATION" != 1 ]] || extra+=(--from-initialization)
   [[ "$RESUME" != 1 ]] || extra+=(--resume)
   for seed in $SEEDS; do
     "$GENERATOR_PYTHON" generator/train_pipeline.py --seed "$seed" --device "$DEVICE" --output "$OUT/generator/training/seed${seed}" ${extra[@]+"${extra[@]}"}
@@ -116,7 +127,9 @@ train_generator_dpo() {
   local extra=()
   [[ "$RESUME" != 1 ]] || extra+=(--resume)
   for seed in $SEEDS; do
-    "$GENERATOR_PYTHON" generator/train.py --seed "$seed" --device "$DEVICE" --output "$OUT/generator/dpo/seed${seed}" ${extra[@]+"${extra[@]}"}
+    local workers=1
+    [[ "$seed" != 0 || "$DEVICE" != cuda ]] || workers=2
+    "$GENERATOR_PYTHON" -m torch.distributed.run --standalone --nproc_per_node="$workers" generator/train.py --seed "$seed" --device "$DEVICE" --output "$OUT/generator/dpo/seed${seed}" ${extra[@]+"${extra[@]}"}
   done
 }
 case "$1" in

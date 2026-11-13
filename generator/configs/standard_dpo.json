@@ -1,0 +1,71 @@
+{
+  "model": "PRISM generator",
+  "seeds": [
+    0,
+    1,
+    2
+  ],
+  "mixture_mode": "uniform",
+  "parameters": 1949048,
+  "dpo_trainable_parameters": 617574,
+  "freeze_name_contains": ".base.",
+  "freeze_name_prefix": "router.",
+  "training_dropout": false,
+  "beta": 0.1,
+  "updates": 1000,
+  "batch_pairs": 128,
+  "optimizer": "Adam",
+  "learning_rate": 1e-06,
+  "adam_epsilon": 1e-07,
+  "gradient_clip_norm": 1.0,
+  "checkpoint_selection": "fixed final update",
+  "sampling": {
+    "kernel": "canonical_log_softmax_two_draw",
+    "seeds": [
+      2026111201,
+      2026111202
+    ],
+    "conditional_temperature": 1.2,
+    "unconditional_temperature": 1.0,
+    "repeat_divisor": 1.2,
+    "max_tokens": 15,
+    "batch": 512,
+    "templates": 50,
+    "attempts_per_template": 400,
+    "force_stop": false,
+    "force_length": false,
+    "refill": false
+  },
+  "selection": "active_bottleneck",
+  "selection_sizes": [
+    24,
+    100
+  ],
+  "targets": [
+    "MMP1",
+    "MMP10",
+    "MMP11",
+    "MMP12",
+    "MMP13",
+    "MMP14",
+    "MMP15",
+    "MMP16",
+    "MMP17",
+    "MMP19",
+    "MMP2",
+    "MMP20",
+    "MMP24",
+    "MMP25",
+    "MMP3",
+    "MMP7",
+    "MMP8",
+    "MMP9"
+  ],
+  "gradient_aggregation": "equal mean of 18 per-target mean gradients",
+  "batch_rng": "2026110810 + 1000 * training_seed + update",
+  "preferences": "data/preferences_SEED{seed}.csv",
+  "novelty_exclusion_counts": {
+    "observed/counterfactual": 569327,
+    "g1_original50/fit_paper": 225618
+  }
+}

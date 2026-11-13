@@ -1,0 +1,72 @@
+{
+  "model": "PRISM generator",
+  "architecture": "original",
+  "training": "18-target supervised adaptation and standard DPO",
+  "targets": [
+    "MMP1",
+    "MMP10",
+    "MMP11",
+    "MMP12",
+    "MMP13",
+    "MMP14",
+    "MMP15",
+    "MMP16",
+    "MMP17",
+    "MMP19",
+    "MMP2",
+    "MMP20",
+    "MMP24",
+    "MMP25",
+    "MMP3",
+    "MMP7",
+    "MMP8",
+    "MMP9"
+  ],
+  "checkpoints": {
+    "generator_SEED0.pt": {
+      "seed": 0,
+      "sha256": "430f29c11f967a8666016559fbe604b7a31c9d322ccaf5b25c86c379dc1324f3",
+      "bytes": 7905108,
+      "updates": 1000,
+      "world_size": 2,
+      "initialization": "initialization/adapted_SEED0.pt",
+      "initialization_sha256": "a95b58f7468698eb68a7666dd05c72f76a26a95b74e3e54b5079a88434790ee8",
+      "pretrained_sha256": "3956da083ef6f51422449b738bdf1a6e1b42f9cfbb9978bcc5fa147bcb1da5db",
+      "preferences_sha256": "6d820e449903272161b143d2fbc7a8b389810347a630874fbf820a9f62f1a131",
+      "main_evaluation_pools_verified": 72,
+      "supplement_evaluation_pools_verified": 72
+    },
+    "generator_SEED1.pt": {
+      "seed": 1,
+      "sha256": "8e451b714018c9381669567ecbdcb6b7323f2d4b8f0b6f167bf1119cc24d3e28",
+      "bytes": 7905108,
+      "updates": 1000,
+      "world_size": 1,
+      "initialization": "initialization/adapted_SEED1.pt",
+      "initialization_sha256": "73f320fa6e94bb70d6d5e80dca329069ba2b5694e7badadfd1fa086eb9d309c7",
+      "pretrained_sha256": "e47e6bafbc778f97d8ccd70fbab9cd2aa419ed337cbf15364aa5c8fe1bd78468",
+      "preferences_sha256": "ff83181db574320f5c192f8edb98026c060162613e7aec2e23360dca8733bb8c",
+      "main_evaluation_pools_verified": 72,
+      "supplement_evaluation_pools_verified": 72
+    },
+    "generator_SEED2.pt": {
+      "seed": 2,
+      "sha256": "ae6e1db935ea4af7c36eabbf7290e3c6e332c261ffc8c7e9c88746a511ffd32d",
+      "bytes": 7905108,
+      "updates": 1000,
+      "world_size": 1,
+      "initialization": "initialization/adapted_SEED2.pt",
+      "initialization_sha256": "79cfb4b3c77ac9bd6f59ee5e3115c5ff24d7d9b98b41bb8c294caa50cdf3194a",
+      "pretrained_sha256": "015e9c80a4864fdf2ac0255915bcb9268cad462d105e828cc595d39eee92d839",
+      "preferences_sha256": "41ead6b87cb48797a803e66d2dde74be8a17ff9e3115a508a326956c71735218",
+      "main_evaluation_pools_verified": 72,
+      "supplement_evaluation_pools_verified": 72
+    }
+  },
+  "training_environment": {
+    "python": "3.12.3",
+    "torch": "2.6.0+cu124",
+    "numpy": "2.3.2",
+    "pandas": "2.3.0"
+  }
+}

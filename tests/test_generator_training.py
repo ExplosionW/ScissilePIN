@@ -77,9 +77,9 @@ class GeneratorTrainingTests(unittest.TestCase):
             model.configure_dpo(loaded)
             before = tr.model_state(loaded)
             frozen = tr.frozen_parameters(loaded)
-            reference = dpo.reference_probs(loaded, x, x.flip(0), y)
+            reference = dpo.reference_probs(loaded, x, x.flip(0), y, target)
             opt = torch.optim.Adam([p for p in loaded.parameters() if p.requires_grad], lr=1e-6, eps=1e-7)
-            a, b = dpo.pair_forward(loaded, x, x.flip(0), y)
+            a, b = dpo.pair_forward(loaded, x, x.flip(0), y, target)
             loss = dpo.dpo_loss(a, b, reference)
             loss.backward()
             torch.nn.utils.clip_grad_norm_(loaded.parameters(), 1.)
@@ -114,17 +114,19 @@ class GeneratorTrainingTests(unittest.TestCase):
                 checkpoint.write_bytes(stage.encode())
                 return checkpoint
             def subprocess(command, check):
-                self.assertEqual(command[command.index('--initialization') + 1], str(out / 'supervised/best.pt'))
+                stage=command[command.index('--stage')+1]
+                expected=out / ('supervised/best.pt' if stage=='adapt' else 'adapt/best.pt')
+                self.assertEqual(command[command.index('--initialization')+1],str(expected))
                 destination = Path(command[command.index('--output') + 1])
                 destination.mkdir()
-                (destination / 'last.pt').write_bytes(b'new-dpo-model')
-            args = SimpleNamespace(output=out, seed=2, device='cpu', resume=False)
+                (destination / ('best.pt' if stage=='adapt' else 'generator_SEED2.pt')).write_bytes(b'new-dpo-model')
+            args = SimpleNamespace(output=out, seed=2, device='cpu', resume=False, from_initialization=False)
             with patch.object(pipeline, 'validate_data', return_value=({}, {})), \
                  patch.object(pipeline, 'initialize', return_value=torch.nn.Linear(1, 1)), \
                  patch.object(pipeline, 'fit_stage', side_effect=fit), \
                  patch.object(pipeline.subprocess, 'run', side_effect=subprocess):
                 pipeline.run(args)
-            self.assertEqual((out / 'final.pt').read_bytes(), b'new-dpo-model')
+            self.assertEqual((out / 'generator_SEED2.pt').read_bytes(), b'new-dpo-model')
             args.resume = True
             with patch.object(pipeline, 'validate_data', return_value=({}, {})), \
                  patch.object(pipeline, 'initialize') as initialize:

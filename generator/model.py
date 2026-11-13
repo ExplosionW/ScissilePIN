@@ -8,7 +8,9 @@ from torch import nn
 from torch.nn import functional as F
 
 AA = 'ACDEFGHIKLMNPQRSTVWY'
-START, STOP, TARGET = 20, 21, 4
+START, STOP = 20, 21
+# Only the inherited pretraining stages use this historical target.
+PRETRAIN_TARGET = 4
 
 
 class Attention(nn.Module):
@@ -148,7 +150,7 @@ class SourceJointGenerator(nn.Module):
         return torch.where(conditional[:, None, None], b.out(self.student.finalnorm(x)), unconditional)
 
 
-class MixtureGenerator(nn.Module):
+class PRISMGenerator(nn.Module):
     def __init__(self, mode='uniform'):
         super().__init__()
         if mode != 'uniform':
@@ -175,10 +177,13 @@ class MixtureGenerator(nn.Module):
         return torch.where(conditional[:, None, None], conditional_logp, a)
 
 
+# Training stages share the unchanged two-expert architecture.
+MixtureGenerator = PRISMGenerator
+
 def load(path, device='cpu'):
     """Load a trusted PRISM generator checkpoint."""
     checkpoint = torch.load(Path(path), map_location='cpu', weights_only=False)
-    model = MixtureGenerator(checkpoint['mixture_mode'])
+    model = PRISMGenerator(checkpoint['mixture_mode'])
     model.load_state_dict(checkpoint['model'], strict=True)
     return model.to(device).eval(), checkpoint
 

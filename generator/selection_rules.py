@@ -1,8 +1,8 @@
-"""Fixed MMP13 bottleneck selection from already scored novel peptides."""
+"""Target-specific bottleneck selection from already scored novel peptides."""
 import numpy as np
 
 
-def select(sequences, profiles, k=100, target=4):
+def select(sequences, profiles, k, target):
     sequences = np.asarray(sequences)
     profiles = np.asarray(profiles)
     if profiles.shape != (len(sequences), 18) or not np.isfinite(profiles).all():

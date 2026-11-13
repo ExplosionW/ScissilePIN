@@ -1,0 +1,4 @@
+# Original 18-target adaptation and standard-DPO environment.
+torch==2.6.0
+numpy==2.3.2
+pandas==2.3.0

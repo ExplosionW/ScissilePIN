@@ -1,4 +1,4 @@
-"""Train the PRISM generator from random initialization through Pareto-DPO."""
+"""Train the PRISM generator from random initialization through 18-target adaptation and standard DPO."""
 import argparse
 import json
 import shutil
@@ -40,9 +40,9 @@ def run(args):
     cfg = json.loads(CONFIG.read_text())
     fit, development = validate_data()
     paths = [CONFIG, Path(__file__), ROOT / 'model.py', ROOT / 'training.py', ROOT / 'train.py',
-             ROOT / 'evaluate_checkpoint.py', ROOT / 'configs/pareto_dpo.json']
-    paths += [ROOT / 'data' / name for name in ('fit.npz', 'development.npz', 'preferences.csv', 'requests.json')]
-    manifest = dict(seed=args.seed, device=args.device, torch=str(torch.__version__), cuda=torch.version.cuda,
+             ROOT / 'evaluate_checkpoint.py', ROOT / 'configs/standard_dpo.json']
+    paths += [ROOT / 'data' / name for name in ('fit.npz', 'development.npz', f'preferences_SEED{args.seed}.csv', 'requests_18.json')]
+    manifest = dict(from_initialization=args.from_initialization, seed=args.seed, device=args.device, torch=str(torch.__version__), cuda=torch.version.cuda,
                     inputs={str(p.relative_to(ROOT)): sha(p) for p in paths})
     out.mkdir(parents=True, exist_ok=True)
     if (out / 'config.json').exists():
@@ -53,28 +53,32 @@ def run(args):
     else:
         write_json(out / 'config.json', manifest)
     if (out / 'done.json').exists():
-        if sha(out / 'final.pt') != json.loads((out / 'done.json').read_text())['sha256']:
+        if sha(out / f'generator_SEED{args.seed}.pt') != json.loads((out / 'done.json').read_text())['sha256']:
             raise ValueError('Final checkpoint changed.')
         print('PRISM generator training is already complete.')
         return
     best = {}
-    for stage, spec in cfg['stages'].items():
+    for stage, spec in ({} if args.from_initialization else cfg['stages']).items():
         sources = ([] if stage == 'pretrain' else [best['pretrain']] if stage == 'refine'
                    else [best['refine']] if stage in ('profile', 'competition')
                    else [best['profile'], best['competition']])
         model = initialize(stage, args.seed, sources).to(args.device)
         best[stage] = fit_stage(model, stage, args.seed, fit, development, out / stage, spec, resume=args.resume)
         del model
-    dpo_out = out / 'dpo'
-    command = [sys.executable, str(ROOT / 'train.py'), '--seed', str(args.seed), '--device', args.device,
-               '--initialization', str(best['supervised']), '--output', str(dpo_out)]
-    if args.resume and (dpo_out / 'resume.pt').exists():
-        command.append('--resume')
-    subprocess.run(command, check=True)
+    initial = ROOT / f'initialization/seed{args.seed}.pt' if args.from_initialization else best['supervised']
+    # Match the original process count: seed 0 used two GPUs, seeds 1/2 one.
+    workers = 2 if args.seed == 0 and args.device == 'cuda' else 1
+    launcher = [sys.executable, '-m', 'torch.distributed.run', '--standalone', f'--nproc_per_node={workers}'] if workers > 1 else [sys.executable]
+    for stage, initialization in [('adapt', initial), ('dpo', out / 'adapt/best.pt')]:
+        destination = out / stage
+        command = launcher + [str(ROOT / 'train.py'), '--stage', stage, '--seed', str(args.seed), '--device', args.device,
+                              '--initialization', str(initialization), '--output', str(destination)]
+        if args.resume and (destination / 'config.json').exists(): command.append('--resume')
+        subprocess.run(command, check=True)
     tmp = out / 'final.tmp.pt'
-    shutil.copyfile(dpo_out / 'last.pt', tmp)
-    tmp.replace(out / 'final.pt')
-    write_json(out / 'done.json', dict(seed=args.seed, sha256=sha(out / 'final.pt'),
+    shutil.copyfile(out / f'dpo/generator_SEED{args.seed}.pt', tmp)
+    tmp.replace(out / f'generator_SEED{args.seed}.pt')
+    write_json(out / 'done.json', dict(seed=args.seed, sha256=sha(out / f'generator_SEED{args.seed}.pt'),
                                       stages={stage: sha(path) for stage, path in best.items()},
                                       dpo_updates=1000))
 
@@ -85,6 +89,7 @@ def main():
     p.add_argument('--device', default='cuda')
     p.add_argument('--output', type=Path, required=True)
     p.add_argument('--resume', action='store_true')
+    p.add_argument('--from-initialization', action='store_true', help='Start from the packaged pretrained mixture before 18-target adaptation.')
     args = p.parse_args()
     if args.device.startswith('cuda') and not torch.cuda.is_available():
         p.error('CUDA is unavailable; use --device cpu explicitly.')

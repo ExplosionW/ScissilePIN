@@ -1,9 +1,12 @@
 """Canonical two-draw peptide sampling."""
+import math
 import torch
 
 
 @torch.inference_mode()
-def sample(net, y, target, conditional, temperature, seed, batch=512):
+def sample(net, y, target, conditional, temperature, seed, batch=512, kernel='canonical'):
+    if kernel not in ('canonical', 'subtract_log'):
+        raise ValueError('Unknown sampling kernel.')
     if temperature <= 0 or batch < 1:
         raise ValueError('Temperature and batch size must be positive.')
     device = next(net.parameters()).device
@@ -23,7 +26,7 @@ def sample(net, y, target, conditional, temperature, seed, batch=512):
             if k:
                 repeated = draw == xx[:, -1]
                 penalized = logits.clone()
-                penalized.scatter_(1, draw[:, None], logits.gather(1, draw[:, None]) / 1.2)
+                penalized.scatter_(1, draw[:, None], (logits.gather(1, draw[:, None]) / 1.2 if kernel == 'canonical' else logits.gather(1, draw[:, None]) - math.log(1.2)))
                 u2 = torch.rand((n, 1), device=device, generator=rng)
                 again = (penalized.softmax(-1).cumsum(-1) < u2).sum(-1).clamp_max(21)
                 draw = torch.where(repeated, again, draw)

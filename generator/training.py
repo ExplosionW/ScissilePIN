@@ -9,7 +9,7 @@ import torch
 from torch import nn
 from torch.nn import functional as F
 
-from model import Attention, NormGenerator, MixtureGenerator, TARGET, STOP
+from model import Attention, NormGenerator, MixtureGenerator, PRETRAIN_TARGET, STOP
 from evaluate_checkpoint import evaluate
 
 ROOT = Path(__file__).resolve().parent
@@ -162,7 +162,7 @@ def nll(logits, tokens):
 
 
 def objective(net, stage, x, y, flags, positive, fraction):
-    targets = torch.full((len(x),), TARGET, device=x.device, dtype=torch.long)
+    targets = torch.full((len(x),), PRETRAIN_TARGET, device=x.device, dtype=torch.long)
     if stage != 'supervised':
         return nll(net(x, y, targets, flags), x).mean()
     _, a, b = net.components(x, y, targets, flags)
@@ -190,12 +190,12 @@ def fit_stage(net, stage, seed, fit, development, out, spec, resume=False, after
     x = torch.tensor(fit['tokens'], device=device, dtype=torch.long)
     y = torch.tensor(fit['conditions'], device=device)
     labels = fit['labels']
-    positive = torch.tensor((labels[:, TARGET] > 1) & (labels[:, TARGET] > np.delete(labels, TARGET, 1).max(1)), device=device)
+    positive = torch.tensor((labels[:, PRETRAIN_TARGET] > 1) & (labels[:, PRETRAIN_TARGET] > np.delete(labels, PRETRAIN_TARGET, 1).max(1)), device=device)
     fraction = float(positive.float().mean())
     frozen = frozen_parameters(net)
     opt = optimizer(net, stage)
     net.eval()
-    initial = evaluate(net, development)
+    initial = evaluate(net, development, target=PRETRAIN_TARGET)
     best, best_epoch, start, step, history = initial['joint_nll'], 0, 1, 0, []
     def payload(epoch):
         result = dict(model=model_state(net), stage=stage, seed=seed, epoch=epoch)
@@ -237,7 +237,7 @@ def fit_stage(net, stage, seed, fit, development, out, spec, resume=False, after
             opt.step()
             loss_sum += float(loss.detach()) * len(ix)
         net.eval()
-        validation = evaluate(net, development)
+        validation = evaluate(net, development, target=PRETRAIN_TARGET)
         if validation['joint_nll'] < best:
             best, best_epoch = validation['joint_nll'], epoch
             save(best_path, payload(epoch))
