@@ -9,7 +9,7 @@ from targets import pool_identity,known_for_request
 def main():
     ap=argparse.ArgumentParser();ap.add_argument('--pools',type=Path,required=True);ap.add_argument('--output',type=Path,required=True);a=ap.parse_args();a.output.mkdir(parents=True,exist_ok=True)
     rows=[]
-    for p in sorted(a.pools.glob('PRISM*.csv')):
+    for p in sorted(a.pools.glob('*_generator*_seed*_sample*_T*_*.csv')):
         d=pd.read_csv(p,keep_default_na=False);identity=pool_identity(d);known=known_for_request(identity['request']);valid=d[d.stopped_normally.astype(str).str.lower().eq('true')&d.sequence.str.fullmatch('[ACDEFGHIKLMNPQRSTVWY]{10}')]
         if d.empty or valid.empty:raise ValueError(f'No valid peptide attempts in {p.name}')
         novel=valid[~valid.sequence.isin(known)].sequence.tolist();m=re.search(r'_seed(\d+)_sample(\d+)_T([\d.]+)_(\w+)$',p.stem)

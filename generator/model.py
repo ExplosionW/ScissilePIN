@@ -150,7 +150,7 @@ class SourceJointGenerator(nn.Module):
         return torch.where(conditional[:, None, None], b.out(self.student.finalnorm(x)), unconditional)
 
 
-class PRISMGenerator(nn.Module):
+class ScissilePINGenerator(nn.Module):
     def __init__(self, mode='uniform'):
         super().__init__()
         if mode != 'uniform':
@@ -178,12 +178,12 @@ class PRISMGenerator(nn.Module):
 
 
 # Training stages share the unchanged two-expert architecture.
-MixtureGenerator = PRISMGenerator
+MixtureGenerator = ScissilePINGenerator
 
 def load(path, device='cpu'):
     """Load a trusted ScissilePIN generator checkpoint."""
     checkpoint = torch.load(Path(path), map_location='cpu', weights_only=False)
-    model = PRISMGenerator(checkpoint['mixture_mode'])
+    model = ScissilePINGenerator(checkpoint['mixture_mode'])
     model.load_state_dict(checkpoint['model'], strict=True)
     return model.to(device).eval(), checkpoint
 

@@ -10,7 +10,7 @@ from targets import pool_identity,known_for_request
 
 def main():
     p=argparse.ArgumentParser();p.add_argument('--pools',type=Path,required=True);p.add_argument('--output',type=Path,required=True);p.add_argument('--device',default='cuda');p.add_argument('--precision',choices=['bf16','fp32'],default='bf16');a=p.parse_args();a.output.mkdir(parents=True,exist_ok=True)
-    rows=[];files=sorted(a.pools.glob('PRISM*.csv'))
+    rows=[];files=sorted(a.pools.glob('*_generator*_seed*_sample*_T*_*.csv'))
     if not files:raise ValueError('No ScissilePIN pools found; run generator or pass a pool directory')
     for file in files:
         raw=pd.read_csv(file,keep_default_na=False);identity=pool_identity(raw);target=identity['target'];known=known_for_request(identity['request']);attempts=len(raw);d=raw;d=d[d.stopped_normally.astype(str).str.lower().eq('true')&d.sequence.str.fullmatch('[ACDEFGHIKLMNPQRSTVWY]{10}')&~d.sequence.isin(known)].drop_duplicates('sequence');seq=d.sequence.tolist()

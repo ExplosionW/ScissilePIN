@@ -65,7 +65,7 @@ smoke() {
   mkdir -p "$OUT/smoke/pools"
   local target=MMP1
   for seed in $SEEDS; do
-    "$GENERATOR_PYTHON" generator/sample.py --target "$target" --request "$REQUEST" --checkpoint "generator/checkpoints/generator_SEED${seed}.pt" --device "$DEVICE" --seed 2026111201 --per-template 1 --output "$OUT/smoke/pools/PRISM_generator_seed${seed}_sample2026111201_T1.2_selective.csv"
+    "$GENERATOR_PYTHON" generator/sample.py --target "$target" --request "$REQUEST" --checkpoint "generator/checkpoints/generator_SEED${seed}.pt" --device "$DEVICE" --seed 2026111201 --per-template 1 --output "$OUT/smoke/pools/ScissilePIN_generator_seed${seed}_sample2026111201_T1.2_selective.csv"
   done
   "$METRICS_PYTHON" evaluation/generator_quality.py --pools "$OUT/smoke/pools" --output "$OUT/smoke/quality"
 }
@@ -91,7 +91,7 @@ generator() {
     "$GENERATOR_PYTHON" generator/evaluate_checkpoint.py --target "$TARGET" --checkpoint "generator/checkpoints/generator_SEED${seed}.pt" --device "$DEVICE" --output "$OUT/generator/nll/nll_seed${seed}.json"
     for target in $targets; do
     for rep in $SAMPLING_SEEDS; do
-      "$GENERATOR_PYTHON" generator/sample.py --target "$target" --request "$REQUEST" --checkpoint "generator/checkpoints/generator_SEED${seed}.pt" --device "$DEVICE" --seed "$rep" --temperature "$TEMPERATURE" --mode "$MODE" --per-template "$PER_TEMPLATE" --output "$OUT/generator/pools/PRISM_generator_${target}_${REQUEST}_seed${seed}_sample${rep}_T${TEMPERATURE}_${MODE}.csv"
+      "$GENERATOR_PYTHON" generator/sample.py --target "$target" --request "$REQUEST" --checkpoint "generator/checkpoints/generator_SEED${seed}.pt" --device "$DEVICE" --seed "$rep" --temperature "$TEMPERATURE" --mode "$MODE" --per-template "$PER_TEMPLATE" --output "$OUT/generator/pools/ScissilePIN_generator_${target}_${REQUEST}_seed${seed}_sample${rep}_T${TEMPERATURE}_${MODE}.csv"
     done
     done
   done
@@ -99,7 +99,7 @@ generator() {
   "$METRICS_PYTHON" evaluation/generator_quality.py --pools "$OUT/generator/pools" --output "$OUT/generator/quality"
 }
 score_generated() {
-  "$PYTORCH_PYTHON" evaluation/score_generated.py --pools "${POOL_DIR:-$OUT/generator/pools}" --output "$OUT/generator/prism_scores" --device "$DEVICE" --precision "$FEATURE_PRECISION"
+  "$PYTORCH_PYTHON" evaluation/score_generated.py --pools "${POOL_DIR:-$OUT/generator/pools}" --output "$OUT/generator/scissilepin_scores" --device "$DEVICE" --precision "$FEATURE_PRECISION"
 }
 train_predictor() {
   "$PYTORCH_PYTHON" predictor/train.py --lm-init "$PREDICTOR_LM_INIT" --check-inputs

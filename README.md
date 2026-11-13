@@ -88,7 +88,7 @@ SEEDS="0" DEVICE=cuda bash run.sh train-predictor
 SEEDS="0" RESUME=1 DEVICE=cuda bash run.sh train-predictor
 ```
 
-Training runs three stages: task-backbone training, pretrained task-LM integration, and shared-query adapter training. ESM features remain frozen. The task-LM initialization is included in `predictor/initialization/`; training settings are in `predictor/configs/prism.json`.
+Training runs three stages: task-backbone training, pretrained task-LM integration, and shared-query adapter training. ESM features remain frozen. The task-LM initialization is included in `predictor/initialization/`; training settings are in `predictor/configs/scissilepin.json`.
 
 Models are saved to `outputs/predictor/training/seed{0,1,2}/final.pt`. Pass a new model to `predictor/predict.py --checkpoint` to use it for prediction.
 
@@ -212,6 +212,6 @@ Benchmark data use cleavage Z-scores; OOD data use published experimental effici
 | `generator/nll/` | Generator development loss |
 | `generator/pools/` | Raw generated sequences |
 | `generator/quality/` | Sequence-quality summaries |
-| `generator/prism_scores/` | Predicted activity profiles, scores and selected peptides |
+| `generator/scissilepin_scores/` | Predicted activity profiles, scores and selected peptides |
 | `generator/training/seed*/` | Complete generator training: stage checkpoints, histories and final model |
 | `generator/dpo/seed*/` | Standard-DPO weights trained from the supplied 18-target initialization |

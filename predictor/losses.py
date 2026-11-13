@@ -16,7 +16,7 @@ def validation_loss(pred, truth):
             + 2 * (margins(pred) - margins(truth)).square().mean())
 
 
-class PRISMLoss:
+class ScissilePINLoss:
     def __init__(self, train_labels):
         self.activity = torch.quantile(train_labels, .5, dim=0)
         self.margin = torch.stack([

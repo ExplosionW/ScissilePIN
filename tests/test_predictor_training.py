@@ -14,7 +14,7 @@ import torch
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'predictor'))
 import train as training
-from losses import PRISMLoss, validation_loss
+from losses import ScissilePINLoss, validation_loss
 from model import AblatedAdapter
 from predict import load, predict
 
@@ -39,7 +39,7 @@ class TrainingTests(unittest.TestCase):
         ctx.f = {s: torch.tensor(rng.normal(size=(8, 10, 1280)), dtype=torch.float32) for s in ('train', 'val')}
         ctx.y = {s: torch.tensor(rng.normal(size=(8, 18)), dtype=torch.float32) for s in ('train', 'val')}
         ctx.data = lambda s, ix: (ctx.z[s][ix], ctx.f[s][ix])
-        ctx.loss, ctx.pair_count = PRISMLoss(ctx.y['train']), 512
+        ctx.loss, ctx.pair_count = ScissilePINLoss(ctx.y['train']), 512
         return ctx
 
     def test_loss_matches_archived_formula_and_gradient(self):
@@ -47,7 +47,7 @@ class TrainingTests(unittest.TestCase):
         truth = torch.randn(128, 18)
         p = torch.randn(128, 18, requires_grad=True)
         q = p.detach().clone().requires_grad_(True)
-        loss = PRISMLoss(truth)
+        loss = ScissilePINLoss(truth)
         def margin(x):
             off = x[:, None, :].expand(-1, 18, -1).masked_fill(torch.eye(18, dtype=torch.bool)[None], -torch.inf)
             return x - off.max(-1).values

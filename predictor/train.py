@@ -8,10 +8,10 @@ import numpy as np
 import torch
 
 from model import AblatedBase, AblatedAdapter, DeCleaveLM, encode
-from losses import PRISMLoss, validation_loss
+from losses import ScissilePINLoss, validation_loss
 
 ROOT = Path(__file__).resolve().parents[1]
-CONFIG = Path(__file__).with_name('configs') / 'prism.json'
+CONFIG = Path(__file__).with_name('configs') / 'scissilepin.json'
 STAGES = ('task_base', 'lm_stage', 'adapter')
 
 
@@ -113,7 +113,7 @@ class Context:
         if self.feature_metadata['train'] != self.feature_metadata['val']:
             raise ValueError('Training and validation feature settings differ.')
         self.pair_count = historical_pair_count(self.y['train'].cpu().numpy())
-        self.loss = PRISMLoss(self.y['train'])
+        self.loss = ScissilePINLoss(self.y['train'])
 
     def data(self, split, ix):
         return self.z[split][ix], self.f[split][ix]
