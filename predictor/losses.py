@@ -1,4 +1,4 @@
-"""PRISM predictor training loss."""
+"""ScissilePIN predictor training loss."""
 import torch
 
 

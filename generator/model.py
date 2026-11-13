@@ -1,4 +1,4 @@
-"""PRISM generator with profile and competition experts."""
+"""ScissilePIN generator with profile and competition experts."""
 import math
 from pathlib import Path
 
@@ -154,7 +154,7 @@ class PRISMGenerator(nn.Module):
     def __init__(self, mode='uniform'):
         super().__init__()
         if mode != 'uniform':
-            raise ValueError('This release implements the fixed equal-weight PRISM generator.')
+            raise ValueError('This release implements the fixed equal-weight ScissilePIN generator.')
         self.mixture_mode = mode
         self.experts = nn.ModuleList([SourceJointGenerator('profile'), SourceJointGenerator('competition')])
         self.router = nn.Sequential(nn.Linear(40, 16), nn.SiLU(), nn.Linear(16, 2))
@@ -181,7 +181,7 @@ class PRISMGenerator(nn.Module):
 MixtureGenerator = PRISMGenerator
 
 def load(path, device='cpu'):
-    """Load a trusted PRISM generator checkpoint."""
+    """Load a trusted ScissilePIN generator checkpoint."""
     checkpoint = torch.load(Path(path), map_location='cpu', weights_only=False)
     model = PRISMGenerator(checkpoint['mixture_mode'])
     model.load_state_dict(checkpoint['model'], strict=True)

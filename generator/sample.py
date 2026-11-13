@@ -1,4 +1,4 @@
-"""Generate target-specific peptides with PRISM generator."""
+"""Generate target-specific peptides with ScissilePIN generator."""
 import argparse,csv,json
 from pathlib import Path
 import numpy as np
@@ -42,7 +42,7 @@ def main():
                 valid=bool(stop and length==10 and np.all(tok<20))
                 reason=('no_stop' if not stop else 'special_token' if np.any(tok>=20) else 'length' if length!=10 else 'known_sequence' if seq in known else '')
                 wr.writerow([lo+j,seq,(lo+j)//args.per_template,args.target,t,args.request,ck['seed'],args.seed,sampling_seed,bool(stop),int(length),valid,reason])
-    meta=dict(model='PRISM generator',checkpoint_sha256=sha(args.checkpoint),training_seed=ck['seed'],target=args.target,target_index=t,target_order=TARGETS,request=args.request,rep=args.seed,sampling_seed=sampling_seed,kernel=kernel,temperature=temperature,batch=args.batch,attempts=len(y),raw_sha256=sha(args.output))
+    meta=dict(model='ScissilePIN generator',checkpoint_sha256=sha(args.checkpoint),training_seed=ck['seed'],target=args.target,target_index=t,target_order=TARGETS,request=args.request,rep=args.seed,sampling_seed=sampling_seed,kernel=kernel,temperature=temperature,batch=args.batch,attempts=len(y),raw_sha256=sha(args.output))
     args.output.with_suffix('.json').write_text(json.dumps(meta,indent=2)+'\n')
     print(f'Saved {len(y)} {args.target} attempts to {args.output}')
 if __name__=='__main__':main()

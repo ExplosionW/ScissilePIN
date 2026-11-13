@@ -1,5 +1,5 @@
 {
-  "model": "PRISM generator",
+  "model": "ScissilePIN generator",
   "architecture": "original",
   "training": "18-target supervised adaptation and standard DPO",
   "targets": [

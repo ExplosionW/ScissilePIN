@@ -1,4 +1,4 @@
-"""Train the PRISM generator from random initialization through 18-target adaptation and standard DPO."""
+"""Train the ScissilePIN generator from random initialization through 18-target adaptation and standard DPO."""
 import argparse
 import json
 import shutil
@@ -55,7 +55,7 @@ def run(args):
     if (out / 'done.json').exists():
         if sha(out / f'generator_SEED{args.seed}.pt') != json.loads((out / 'done.json').read_text())['sha256']:
             raise ValueError('Final checkpoint changed.')
-        print('PRISM generator training is already complete.')
+        print('ScissilePIN generator training is already complete.')
         return
     best = {}
     for stage, spec in ({} if args.from_initialization else cfg['stages']).items():

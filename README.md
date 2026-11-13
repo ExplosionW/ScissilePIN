@@ -1,18 +1,16 @@
-# PRISM
+# ScissilePIN
 
-**Peptide Regression and Inverse design for Selective Metalloproteinase substrates**
+**Scissile probe Prediction and Inverse design Network**
 
-PRISM is a deep learning framework for predicting peptide cleavage activity and designing substrates for matrix metalloproteinases (MMPs). It brings activity prediction and sequence generation into a single workflow, with target-specific generation across 18 MMPs.
+ScissilePIN predicts peptide cleavage across 18 matrix metalloproteinases (MMPs) and designs candidate substrates for each enzyme. To our knowledge, ScissilePIN is the first conditional generator shown to produce candidates with predicted activity and selectivity for every one of the 18 MMPs in this panel. For each target, qualifying peptides exceed the target activity threshold and have higher predicted cleavage by that MMP than by any of the other 17.
 
-The **PRISM predictor** combines peptide language-model features with enzyme-conditioned modeling to estimate an 18-enzyme activity profile for each sequence. These profiles support candidate screening based on both target activity and competing enzyme activity.
-
-The **PRISM generator** combines profile and competition experts with standard DPO to optimize target activity and selectivity against the other 17 MMPs. To our knowledge, PRISM is the first framework for target-specific substrate generation across all 18 MMPs.
+The predictor estimates an 18-enzyme activity profile for each peptide. The generator combines profile and competition experts trained with direct preference optimization to design peptides for a requested activity profile.
 
 Supported targets: **MMP1, MMP2, MMP3, MMP7, MMP8, MMP9, MMP10, MMP11, MMP12, MMP13, MMP14, MMP15, MMP16, MMP17, MMP19, MMP20, MMP24 and MMP25**.
 
 This repository provides pretrained predictor and generator weights, their training pipelines, and tools for peptide generation, prediction and evaluation.
 
-![PRISM](assets/prism_overview.svg)
+![ScissilePIN prediction and conditional generation](assets/scissilepin_overview.svg)
 
 ## Table of contents
 
@@ -21,8 +19,8 @@ This repository provides pretrained predictor and generator weights, their train
   - [Project structure](#project-structure)
   - [Check the installation](#check-the-installation)
 - [Training models](#training-models)
-  - [PRISM predictor](#prism-predictor)
-  - [PRISM generator full training pipeline](#prism-generator-full-training-pipeline)
+  - [ScissilePIN predictor](#scissilepin-predictor)
+  - [ScissilePIN generator full training pipeline](#scissilepin-generator-full-training-pipeline)
 - [Predicting peptide activity](#predicting-peptide-activity)
 - [Generating peptides](#generating-peptides)
   - [Generate and score](#generate-and-score)
@@ -78,7 +76,9 @@ The smoke check loads all three predictor and generator checkpoints and generate
 
 ## Training models
 
-### PRISM predictor
+![ScissilePIN predictor, generator and selection workflow](assets/scissilepin_architecture.svg)
+
+### ScissilePIN predictor
 
 ```sh
 # Train all three seeds:
@@ -92,7 +92,7 @@ Training runs three stages: task-backbone training, pretrained task-LM integrati
 
 Models are saved to `outputs/predictor/training/seed{0,1,2}/final.pt`. Pass a new model to `predictor/predict.py --checkpoint` to use it for prediction.
 
-### PRISM generator full training pipeline
+### ScissilePIN generator full training pipeline
 
 The training environment uses Python 3.12, PyTorch 2.6.0, NumPy 2.3.2 and pandas 2.3.0:
 
@@ -116,8 +116,6 @@ The training stages are base decoder pretraining (150 epochs), refinement (60), 
 Released weights are `generator/checkpoints/generator_SEED0.pt`, `generator_SEED1.pt` and `generator_SEED2.pt`. Training writes new weights to `outputs/generator/training/seed*/generator_SEED*.pt`. The exact DPO starting states are in `generator/initialization/adapted_SEED*.pt`; `DEVICE=cuda bash run.sh train-generator-dpo` trains from them. Settings and checkpoint hashes are in `generator/configs/`.
 
 ## Predicting peptide activity
-
-![PRISM architecture](assets/predictor_model.svg)
 
 ```sh
 DEVICE=cuda FEATURE_PRECISION=bf16 bash run.sh predictor

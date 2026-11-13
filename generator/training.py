@@ -1,4 +1,4 @@
-"""Fixed supervised stages of PRISM generator training."""
+"""Fixed supervised stages of ScissilePIN generator training."""
 import hashlib
 import json
 import random

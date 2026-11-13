@@ -1,4 +1,4 @@
-"""Train the three-stage PRISM predictor."""
+"""Train the three-stage ScissilePIN predictor."""
 import argparse
 import hashlib
 import json

@@ -1,4 +1,4 @@
-"""PRISM predictor architecture."""
+"""ScissilePIN predictor architecture."""
 import numpy as np
 import torch
 from torch import nn

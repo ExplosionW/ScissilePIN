@@ -1,4 +1,4 @@
-"""Shared target, request and scoring identities for PRISM generator."""
+"""Shared target, request and scoring identities for ScissilePIN generator."""
 import json
 from pathlib import Path
 import numpy as np

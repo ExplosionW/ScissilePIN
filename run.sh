@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Entry point for PRISM prediction, generation, evaluation and fixed-recipe training.
+# Entry point for ScissilePIN prediction, generation, evaluation and fixed-recipe training.
 set -euo pipefail
 ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 cd "$ROOT"
@@ -30,11 +30,11 @@ Usage: bash run.sh COMMAND
   verify           Verify files, labelled datasets and disjoint sequence splits.
   smoke            Load all predictor weights and sample 50 peptides per generator.
   predictor        Extract ESM features; predict val/test/OOD; evaluate all three seeds.
-  generator        Evaluate development NLL and generate PRISM generator standard-DPO pools.
-  score-generated  Score generated pools using the three-seed PRISM predictor ensemble.
+  generator        Evaluate development NLL and generate ScissilePIN generator standard-DPO pools.
+  score-generated  Score generated pools using the three-seed ScissilePIN predictor ensemble.
   all              Run verify, predictor, generator and score-generated.
-  train-predictor  Train the PRISM predictor.
-  train-generator  Train the complete PRISM generator pipeline.
+  train-predictor  Train the ScissilePIN predictor.
+  train-generator  Train the complete ScissilePIN generator pipeline.
   train-generator-dpo  Train DPO from the included supervised weights.
 
 Environment variables:

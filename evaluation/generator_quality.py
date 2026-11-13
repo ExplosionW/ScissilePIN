@@ -18,7 +18,7 @@ def main():
         for k in [3,4,5,6]:
             counts=collections.Counter(s[i:i+k] for s in novel for i in range(11-k));n=sum(counts.values());row.update({f'k{k}_distinct':len(counts),f'k{k}_entropy':float(entropy(list(counts.values()),base=2)) if n else np.nan,f'k{k}_top10_mass':sum(v for _,v in counts.most_common(10))/n if n else np.nan})
         rows.append(row)
-    if not rows:raise ValueError('No PRISM generation pools found')
+    if not rows:raise ValueError('No ScissilePIN generation pools found')
     df=pd.DataFrame(rows);df.to_csv(a.output/'quality_by_repeat.csv',index=False)
     metrics=['valid_fraction','unique_fraction','known_fraction','unique_novel','novel_unique_per_attempt','k3_entropy','k6_entropy'];byseed=df.groupby(['target','request','temperature','mode','seed'])[metrics].mean();byseed.to_csv(a.output/'quality_by_seed.csv');g=byseed.groupby(['target','request','temperature','mode'])[metrics].agg(['mean','std']);g.columns=['_'.join(x) for x in g.columns];g.to_csv(a.output/'quality_summary.csv')
     print(g.to_string())

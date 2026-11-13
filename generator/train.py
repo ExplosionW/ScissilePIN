@@ -142,7 +142,7 @@ def run(args,rank,world,device):
     if (out/'done.json').exists():
         d=json.loads((out/'done.json').read_text());assert sha(out/d['file'])==d['sha256'];return
     development=arrays(device,'development');history=[];start=1
-    def payload(step):return dict(model=model_state(model),model_name='PRISM generator',arm='standard',architecture='original',mixture_mode='uniform',seed=args.seed,stage=args.stage,epoch=step,world_size=world)
+    def payload(step):return dict(model=model_state(model),model_name='ScissilePIN generator',arm='standard',architecture='original',mixture_mode='uniform',seed=args.seed,stage=args.stage,epoch=step,world_size=world)
     if args.stage=='adapt':
         # The extra source load preserves the training construction sequence.
         source,_=load_training(initial,device);del source

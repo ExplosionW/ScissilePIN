@@ -1,4 +1,4 @@
-"""Score generated sequences with the released three-seed PRISM predictor ensemble."""
+"""Score generated sequences with the released three-seed ScissilePIN predictor ensemble."""
 from pathlib import Path
 import sys,argparse,subprocess,json,re
 import numpy as np,pandas as pd
@@ -11,7 +11,7 @@ from targets import pool_identity,known_for_request
 def main():
     p=argparse.ArgumentParser();p.add_argument('--pools',type=Path,required=True);p.add_argument('--output',type=Path,required=True);p.add_argument('--device',default='cuda');p.add_argument('--precision',choices=['bf16','fp32'],default='bf16');a=p.parse_args();a.output.mkdir(parents=True,exist_ok=True)
     rows=[];files=sorted(a.pools.glob('PRISM*.csv'))
-    if not files:raise ValueError('No PRISM pools found; run generator or pass a pool directory')
+    if not files:raise ValueError('No ScissilePIN pools found; run generator or pass a pool directory')
     for file in files:
         raw=pd.read_csv(file,keep_default_na=False);identity=pool_identity(raw);target=identity['target'];known=known_for_request(identity['request']);attempts=len(raw);d=raw;d=d[d.stopped_normally.astype(str).str.lower().eq('true')&d.sequence.str.fullmatch('[ACDEFGHIKLMNPQRSTVWY]{10}')&~d.sequence.isin(known)].drop_duplicates('sequence');seq=d.sequence.tolist()
         if not seq:raise ValueError(f'No novel canonical peptides in {file.name}')
@@ -29,7 +29,7 @@ def main():
         if not match:raise ValueError(f'Unexpected pool name: {file.stem}')
         selected=pd.DataFrame({'rank':np.arange(1,len(top)+1),'sequence':np.asarray(seq)[top],'target':target,'target_index':t,'target_activity':activity[top],'max_competitor':off.max(1)[top],'bottleneck':np.minimum(activity-1,margin)[top],'predicted_joint':joint[top]})
         selected.to_csv(work/'selected_top100.csv',index=False)
-        rows.append(dict(pool=file.stem,target=target,target_index=t,request=identity['request'],seed=int(match[1]),replicate=int(match[2]),temperature=float(match[3]),mode=match[4],scorer='PRISM ensemble (seeds 0,1,2)',attempts=attempts,unique_novel=len(seq),target_predicted_activity_mean=float(activity.mean()),mean_contrast_selectivity_mean=float(selectivity.mean()),predicted_target_leads_fraction=float((margin>0).mean()),predicted_joint_unique=int(joint.sum()),predicted_joint_per_attempt=float(joint.sum()/attempts),top24_n=len(top24),top100_n=len(top),top24_joint_fraction=float(joint[top24].mean()),top100_joint_fraction=float(joint[top].mean()),top100_selectivity_mean=float(selectivity[top].mean())))
+        rows.append(dict(pool=file.stem,target=target,target_index=t,request=identity['request'],seed=int(match[1]),replicate=int(match[2]),temperature=float(match[3]),mode=match[4],scorer='ScissilePIN ensemble (seeds 0,1,2)',attempts=attempts,unique_novel=len(seq),target_predicted_activity_mean=float(activity.mean()),mean_contrast_selectivity_mean=float(selectivity.mean()),predicted_target_leads_fraction=float((margin>0).mean()),predicted_joint_unique=int(joint.sum()),predicted_joint_per_attempt=float(joint.sum()/attempts),top24_n=len(top24),top100_n=len(top),top24_joint_fraction=float(joint[top24].mean()),top100_joint_fraction=float(joint[top].mean()),top100_selectivity_mean=float(selectivity[top].mean())))
         print(json.dumps(rows[-1]),flush=True)
     table=pd.DataFrame(rows);table.to_csv(a.output/'predicted_function.csv',index=False)
     metrics=[c for c in table.select_dtypes(include='number').columns if c not in ['seed','replicate','temperature','target_index']]

@@ -1,4 +1,4 @@
-"""Evaluate PRISM predictions with Pareto-Max selection."""
+"""Evaluate ScissilePIN predictions with Pareto-Max selection."""
 from pathlib import Path
 import argparse,json,sys
 import numpy as np
