@@ -46,7 +46,7 @@ python -m pip install -r requirements/predictor.txt -r requirements/generator.tx
 ### Project structure
 
 ```text
-PRISM/
+ScissilePIN/
 ├── predictor/                 # Activity prediction and training
 │   ├── checkpoints/           # Released predictor weights (seeds 0, 1, 2)
 │   ├── initialization/        # Pretrained task-LM weights and enzyme inputs
